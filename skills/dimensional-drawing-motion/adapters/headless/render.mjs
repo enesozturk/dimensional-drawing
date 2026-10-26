@@ -13,6 +13,8 @@ import { spawn } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
@@ -53,43 +55,66 @@ catch { console.error('playwright not found: run `npm install` in this folder');
 const launch = {};
 if (process.env.CHROMIUM_PATH) launch.executablePath = process.env.CHROMIUM_PATH;
 const browser = await chromium.launch(launch);
-const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
-page.on('pageerror', e => console.error('[scene error]', e.message));
 
-// Fonts: the page asks Google Fonts for Arimo; offline it falls back to Helvetica/Arial (same metrics).
-await page.setContent(html, { waitUntil: 'load', timeout: 15000 }).catch(() => {});
-await page.waitForFunction(() => window.__READY__ === true, null, { timeout: 15000 });
-await page.evaluate(() => document.fonts && document.fonts.ready);
+async function render() {
+  const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
+  page.on('pageerror', e => console.error('[scene error]', e.message));
 
-const shot = () => page.screenshot({ type: 'png', clip: { x: 0, y: 0, width: W, height: H } });
+  // Fonts: the page asks Google Fonts for Arimo; offline it falls back to Helvetica/Arial (same metrics).
+  await page.setContent(html, { waitUntil: 'load', timeout: 15000 }).catch(() => {});
+  await page.waitForFunction(() => window.__READY__ === true, null, { timeout: 15000 });
+  await page.evaluate(() => document.fonts && document.fonts.ready);
 
-if (o.still !== undefined) {
-  await page.evaluate(t => window.R(t), +o.still);
-  const buf = await shot();
-  mkdirSync(dirname(OUT), { recursive: true });
-  writeFileSync(OUT, buf);
-  console.log('still →', OUT);
+  const shot = () => page.screenshot({ type: 'png', clip: { x: 0, y: 0, width: W, height: H } });
+
+  if (o.still !== undefined) {
+    await page.evaluate(t => window.R(t), +o.still);
+    const buf = await shot();
+    mkdirSync(dirname(OUT), { recursive: true });
+    writeFileSync(OUT, buf);
+    console.log('still →', OUT);
+    return;
+  }
+
+  const ffmpeg = spawn(o.ffmpeg || 'ffmpeg', [
+    '-y', '-loglevel', 'error',
+    '-f', 'image2pipe', '-framerate', String(FPS), '-i', '-',
+    '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', String(o.crf || 16), '-preset', 'medium',
+    '-movflags', '+faststart', OUT,
+  ], { stdio: ['pipe', 'inherit', 'inherit'] });
+  const encoded = new Promise((resolve, reject) => {
+    ffmpeg.once('error', error => reject(new Error(
+      'ffmpeg not found on PATH (or pass --ffmpeg /path/to/ffmpeg)', { cause: error })));
+    ffmpeg.once('close', (code, signal) => {
+      if (code === 0) resolve();
+      else reject(new Error(`ffmpeg exited with ${signal ? `signal ${signal}` : `code ${code}`}`));
+    });
+  });
+
+  const N = Math.round(DUR * FPS);
+  const t0 = Date.now();
+  async function* frames() {
+    for (let i = 0; i < N; i++) {
+      await page.evaluate(t => window.R(t), i / FPS);
+      yield await shot();
+      if (i % FPS === 0) process.stdout.write(`\rframe ${i}/${N}`);
+    }
+  }
+  try {
+    // The pipeline also rejects if the encoder closes stdin before all frames arrive.
+    await Promise.all([encoded, pipeline(Readable.from(frames()), ffmpeg.stdin)]);
+  } finally {
+    if (ffmpeg.exitCode === null && ffmpeg.signalCode === null) ffmpeg.kill();
+    await encoded.catch(() => {});
+  }
+  console.log(`\r${N} frames → ${OUT}  (${((Date.now() - t0) / 1000).toFixed(1)} s)`);
+}
+
+try {
+  await render();
+} catch (error) {
+  console.error(error.message);
+  process.exitCode = 1;
+} finally {
   await browser.close();
-  process.exit(0);
 }
-
-const ffmpeg = spawn(o.ffmpeg || 'ffmpeg', [
-  '-y', '-loglevel', 'error',
-  '-f', 'image2pipe', '-framerate', String(FPS), '-i', '-',
-  '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', String(o.crf || 16), '-preset', 'medium',
-  '-movflags', '+faststart', OUT,
-], { stdio: ['pipe', 'inherit', 'inherit'] });
-ffmpeg.on('error', () => { console.error('ffmpeg not found on PATH (or pass --ffmpeg /path/to/ffmpeg)'); process.exit(1); });
-
-const N = Math.round(DUR * FPS);
-const t0 = Date.now();
-for (let i = 0; i < N; i++) {
-  await page.evaluate(t => window.R(t), i / FPS);
-  const buf = await shot();
-  if (!ffmpeg.stdin.write(buf)) await new Promise(r => ffmpeg.stdin.once('drain', r));
-  if (i % FPS === 0) process.stdout.write(`\rframe ${i}/${N}`);
-}
-ffmpeg.stdin.end();
-await new Promise(r => ffmpeg.on('close', r));
-await browser.close();
-console.log(`\r${N} frames → ${OUT}  (${((Date.now() - t0) / 1000).toFixed(1)} s)`);

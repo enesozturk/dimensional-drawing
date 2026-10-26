@@ -42,3 +42,9 @@ Set `CHROMIUM_PATH` to use an existing Chrome/Chromium instead of the downloaded
 Tested: Playwright 1.4x + Chromium, ffmpeg 6.1. An 11 s film at 30 fps renders in about 45 s on a laptop-class CPU.
 
 Not tested: Remotion, Motion Canvas, GSAP, Lottie or other animation libraries.
+
+## Regression checks
+
+With the prerequisites above installed, run `npm test`. The checks exercise a
+successful MP4 export, encoder failure, early encoder termination, and a missing
+encoder. Failed exports exit nonzero and do not print the export-success message.

@@ -5,6 +5,7 @@
   "type": "module",
   "description": "Render dimensional-drawing motion scenes to MP4 with Playwright + ffmpeg.",
   "scripts": {
+    "test": "node --test render.test.mjs",
     "postinstall": "playwright install chromium",
     "example": "node render.mjs --scene ../../templates/scene-dialog.js --css ../../templates/base.css --out ../../../../assets/dialog-headless.mp4"
   },

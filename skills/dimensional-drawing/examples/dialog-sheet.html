@@ -207,7 +207,7 @@ notes([[1,'TITLE SLOT FLEXES (MIN-WIDTH 0) AND WRAPS. HEADER GROWS PAST H1.'],[2
  const L2=(g,x1,y1,x2,y2,cls)=>mk('line',{x1:x1,y1:y1,x2:x2,y2:y2,class:cls,'vector-effect':'non-scaling-stroke'},g);
  [[0,0],[W,0],[W,H],[0,H]].forEach(([x,y])=>{const p1=P(x,y,gap*2),p2=P(x,y,gap*5);mk('line',{x1:p1[0],y1:p1[1],x2:p2[0],y2:p2[1],class:'ph'})});
  let g=G(0);R2(g,-60,-60,540,568,0,'thin');
- g=G(gap);R2(g,-60,-60,540,568,0,'thin',{fill:HAT,'fill-opacity':.35});
+ g=G(gap);R2(g,-60,-60,540,568,0,'hs',{fill:HAT,'fill-opacity':.35});
  g=G(gap*2);R2(g,16,48,388,H-32,16,'hs',{fill:HAT});
  g=G(gap*3);R2(g,0,0,W,H,16,'obj');L2(g,1,65,419,65,'ph');L2(g,1,383,419,383,'ph');
  g=G(gap*4);R2(g,5,65,410,318,11,'well');
@@ -244,7 +244,7 @@ notes([[1,'TITLE SLOT FLEXES (MIN-WIDTH 0) AND WRAPS. HEADER GROWS PAST H1.'],[2
 
 /* ---- VIEWPORT PLACEMENT 0.25:1 ---- */
 {const s=.25,VX=80,VY=780,vw=1280*s,vh=800*s,dw=W*s,dh=H*s,dx=VX+(vw-dw)/2,dy=VY+(vh-dh)/2,m=40*s;
- mk('rect',{x:VX,y:VY,width:vw,height:vh,class:'thin',fill:HAT,'fill-opacity':.35});
+ mk('rect',{x:VX,y:VY,width:vw,height:vh,class:'hs',fill:HAT,'fill-opacity':.35});
  mk('rect',{x:VX+vw/2-dw/2,y:VY+m,width:dw,height:vh-2*m,class:'ph'});
  mk('rect',{x:dx-56*s,y:dy-24*s,width:dw+112*s,height:dh+112*s,class:'env'});
  mk('rect',{x:dx,y:dy,width:dw,height:dh,rx:16*s,class:'obj'});

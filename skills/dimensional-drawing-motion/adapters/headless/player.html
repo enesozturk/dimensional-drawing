@@ -23,7 +23,7 @@
   document.documentElement.style.setProperty('--bg', cfg.bg);
 
   // Minimal kit shim (same helpers the scenes use in Claude Motion).
-  var SCENES = {};
+  var SCENES = Object.create(null);
   var kit = (function () {
     const clamp01 = x => Math.max(0, Math.min(1, x));
     const seg = (t, a, b) => clamp01((t - a) / (b - a));
@@ -43,7 +43,11 @@
 <script id="scene-js">/*__JS__*/</script>
 <script>
   const ids = Object.keys(SCENES);
-  const SC = SCENES[cfg.scene] || SCENES[ids[0]];
+  const id = cfg.scene == null ? ids[0] : cfg.scene;
+  if (!Object.prototype.hasOwnProperty.call(SCENES, id)) {
+    throw new Error(cfg.scene == null ? 'No scenes registered' : `Unknown scene: ${id}`);
+  }
+  const SC = SCENES[id];
   SC.init(kit);
   window.R = t => SC.render(t, kit);
   window.R(0);

@@ -32,8 +32,26 @@ if (!o.scene) {
   console.error('missing --scene <file.js>  (see README in this folder)');
   process.exit(1);
 }
-const W = +(o.width || 1920), H = +(o.height || 1080);
-const FPS = +(o.fps || 60), DUR = +(o.duration || 11);
+function numberOption(name, fallback, valid, requirement) {
+  const raw = o[name] === undefined ? fallback : o[name];
+  const value = typeof raw === 'boolean' || String(raw).trim() === '' ? NaN : Number(raw);
+  if (!Number.isFinite(value) || !valid(value)) {
+    console.error(`invalid --${name}: expected ${requirement}`);
+    process.exit(1);
+  }
+  return value;
+}
+
+const W = numberOption('width', 1920, n => Number.isSafeInteger(n) && n > 0, 'a positive integer');
+const H = numberOption('height', 1080, n => Number.isSafeInteger(n) && n > 0, 'a positive integer');
+const FPS = numberOption('fps', 60, n => n > 0, 'a finite positive number');
+const DUR = numberOption('duration', 11, n => n > 0, 'a finite positive number');
+if (o.still !== undefined) numberOption('still', undefined, () => true, 'a finite time');
+const frameCount = Math.round(DUR * FPS);
+if (o.still === undefined && (!Number.isSafeInteger(frameCount) || frameCount < 1)) {
+  console.error('invalid --duration / --fps: expected at least one frame and a safe frame count');
+  process.exit(1);
+}
 const BG = o.bg || '#ffffff';
 const OUT = resolve(o.out || 'out.mp4');
 const sceneJs = readFileSync(resolve(o.scene), 'utf8');

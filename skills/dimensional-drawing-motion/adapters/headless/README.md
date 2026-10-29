@@ -37,6 +37,14 @@ node render.mjs --scene ../../templates/scene-dialog.js --css ../../templates/ba
 | `--crf` | `16` | x264 quality (lower = bigger, sharper) |
 | `--ffmpeg` | `ffmpeg` | path to ffmpeg |
 
+Stage dimensions must be positive integers. Frame rate and duration must be finite
+positive numbers that produce at least one frame; `--still` accepts any finite
+time, including zero and negative pre-roll times. Invalid numeric input exits before launching
+Chromium or creating an output file.
+
+Run `node --test render-options.test.mjs` to check invalid inputs and real PNG/MP4
+exports with the prerequisites above installed.
+
 Set `CHROMIUM_PATH` to use an existing Chrome/Chromium instead of the downloaded one.
 
 Tested: Playwright 1.4x + Chromium, ffmpeg 6.1. An 11 s film at 30 fps renders in about 45 s on a laptop-class CPU.
